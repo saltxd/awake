@@ -3,8 +3,10 @@ import AppKit
 /// Builds the menu-bar glyph as a **template** `NSImage` — a pure alpha mask the system tints like
 /// the native Wi-Fi/battery icons, adapting to light/dark menu bars and the open-menu highlight.
 ///
-/// A filled sun means "awake", an outline sun means "normal sleep", and a warning-badged sun means
-/// "degraded" (idle blocked, but lid-close will still sleep).
+/// A filled sun means "awake" and a zzz-moon means "normal sleep" — different glyphs, not just
+/// different weights, so on/off reads at a glance the way Wi-Fi's on/off does (a filled vs outline
+/// sun was too subtle at menu-bar size). A warning-badged sun means "degraded" (idle blocked, but
+/// lid-close will still sleep).
 enum MenuBarIcon {
 
     static func make(state: PowerController.AwakeState) -> NSImage {
@@ -13,7 +15,7 @@ enum MenuBarIcon {
         switch state {
         case .on:       (symbol, weight) = ("sun.max.fill", .semibold)
         case .degraded: (symbol, weight) = ("sun.max.trianglebadge.exclamationmark", .regular)
-        case .off:      (symbol, weight) = ("sun.max", .regular)
+        case .off:      (symbol, weight) = ("moon.zzz", .regular)
         }
 
         let config = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: weight)

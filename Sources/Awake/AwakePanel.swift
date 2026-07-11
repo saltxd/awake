@@ -16,9 +16,9 @@ struct AwakePanel: View {
     var body: some View {
         VStack(spacing: 0) {
             hero
-            keepAwakeToggle
+            keepAwakeCard.padding(.top, 16)
             if controller.state == .degraded {
-                degradedNotice
+                degradedNotice.padding(.top, 8)
             }
 
             Divider().padding(.horizontal, 4).padding(.vertical, 12)
@@ -38,32 +38,37 @@ struct AwakePanel: View {
         .padding(.bottom, 12)
         .frame(width: 300)
         .tint(warmAccent)   // drives the switch tint consistently on every Mac
-        .animation(.easeInOut(duration: 0.25), value: controller.state)
+        .animation(.spring(duration: 0.3), value: controller.state)
     }
 
     // MARK: Hero
 
+    /// Glyph → big state word → tracked caption: the same hierarchy as Streak Tracker's
+    /// flame → count → label, so the two apps read as siblings. The word is the only color in the
+    /// panel; when Awake is holding the Mac awake the sun and word ignite in the shared amber and
+    /// the glyph gets a soft glow — state you can read from across the room.
     private var hero: some View {
         let awake = controller.state != .off
         let degraded = controller.state == .degraded
         return VStack(spacing: 2) {
             Image(systemName: heroSymbol)
-                .font(.system(size: 34, weight: awake ? .semibold : .regular))
+                .font(.system(size: 38, weight: awake ? .semibold : .regular))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(degraded ? AnyShapeStyle(Color.orange)
                                  : awake ? AnyShapeStyle(amber) : AnyShapeStyle(.tertiary))
+                .shadow(color: awake && !degraded ? warmAccent.opacity(0.45) : .clear, radius: 12)
+                .contentTransition(.symbolEffect(.replace))
 
-            Text(statusCaption)
+            Text(stateWord)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(degraded ? AnyShapeStyle(Color.orange)
+                                 : awake ? AnyShapeStyle(amber) : AnyShapeStyle(.primary))
+                .padding(.top, 2)
+
+            Text(stateCaption)
                 .font(.caption.weight(.medium))
                 .tracking(0.8)
                 .foregroundStyle(.secondary)
-                .padding(.top, 4)   // breathe between the glyph and its caption
-
-            Text(statusDetail)
-                .font(.caption)
-                .foregroundStyle(.secondary)   // .tertiary can drop below legible on vibrancy
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
         }
         .frame(maxWidth: .infinity)
@@ -77,66 +82,81 @@ struct AwakePanel: View {
         }
     }
 
-    private var statusCaption: String {
+    private var stateWord: String {
         switch controller.state {
-        case .on:       return "AWAKE"
-        case .degraded: return "AWAKE — LIMITED"
-        case .off:      return "SLEEP NORMALLY"
+        case .on:       return "Awake"
+        case .degraded: return "Limited"
+        case .off:      return "Off"
         }
     }
 
-    private var statusDetail: String {
+    private var stateCaption: String {
         switch controller.state {
-        case .on:       return "Mac stays awake — even with the lid closed"
-        case .degraded: return "Awake while the lid is open — lid-close will still sleep (pmset rule missing)"
-        case .off:      return "Normal sleep behavior"
+        case .on:       return "EVEN WITH THE LID CLOSED"
+        case .degraded: return "LID-CLOSE WILL STILL SLEEP"
+        case .off:      return "NORMAL SLEEP"
         }
     }
 
     // MARK: Centerpiece control
 
-    /// The one control that matters — a prominent switch, semibold label, padded like a PanelRow so
-    /// it sits flush with the rows below.
-    private var keepAwakeToggle: some View {
-        Toggle(isOn: Binding(get: { controller.state != .off },
-                             set: { controller.setAwake($0) })) {
-            Label("Keep Awake", systemImage: "sun.max")
-                .font(.body.weight(.semibold))
-                .labelStyle(PanelLabelStyle())
-        }
-        .toggleStyle(.switch)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .padding(.top, 14)   // set the centerpiece apart from the hero caption
+    private var keepAwake: Binding<Bool> {
+        Binding(get: { controller.state != .off },
+                set: { controller.setAwake($0) })
     }
+
+    /// The one control that matters, shaped like a Control Center tile: a full-width card you can
+    /// tap anywhere (the switch keeps its own hit area and wins where they overlap).
+    private var keepAwakeCard: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sun.max")
+                .frame(width: 16)
+                .foregroundStyle(controller.state != .off ? AnyShapeStyle(warmAccent)
+                                                          : AnyShapeStyle(.secondary))
+            Text("Keep Awake")
+                .font(.body.weight(.semibold))
+            Spacer()
+            Toggle("Keep Awake", isOn: keepAwake)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(cardHovering ? 0.09 : 0.06))
+        )
+        .onHover { cardHovering = $0 }
+        .onTapGesture { keepAwake.wrappedValue.toggle() }
+    }
+
+    @State private var cardHovering = false
 
     // MARK: Degraded affordance
 
     private var degradedNotice: some View {
-        VStack(spacing: 4) {
-            Text("Lid-close sleep isn’t blocked yet — run ./install.sh once to enable it.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 8)
-                .padding(.top, 6)
-            PanelRow(title: "How to fix lid-close…", systemImage: "exclamationmark.triangle",
-                     tint: .secondary, iconTint: .orange) {
-                controller.showDegradedAlert(force: true)
-            }
+        PanelRow(title: "How to fix lid-close…", systemImage: "exclamationmark.triangle",
+                 tint: .secondary, iconTint: .orange) {
+            controller.showDegradedAlert(force: true)
         }
     }
 
     // MARK: Login
 
+    /// Full-width utility row: label leading, switch trailing — anchored to the panel edges like
+    /// every other row instead of hugging its content in the middle.
     private var loginRow: some View {
-        Toggle(isOn: Binding(get: { loginItem.isEnabled },
-                             set: { loginItem.setEnabled($0) })) {
+        HStack(spacing: 8) {
             Label("Launch at login", systemImage: "arrow.up.forward.app")
                 .labelStyle(PanelLabelStyle())
+            Spacer()
+            Toggle("Launch at login", isOn: Binding(get: { loginItem.isEnabled },
+                                                    set: { loginItem.setEnabled($0) }))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
         }
-        .toggleStyle(.switch)
-        .controlSize(.small)
         .padding(.horizontal, 8)
         .padding(.vertical, 5)   // match PanelRow's vertical padding so the column aligns
     }
