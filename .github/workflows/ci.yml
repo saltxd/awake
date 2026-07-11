@@ -1,0 +1,39 @@
+name: CI
+
+# Compile-checks the SwiftUI app on a macOS runner with a full Xcode toolchain (the app target
+# needs the SwiftUIMacros plugin, which Command Line Tools alone lack), assembles the .app bundle,
+# and uploads it as a downloadable artifact so a change can be run and eyeballed without building
+# locally (beta-macOS CLT can't build SwiftUI app targets).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Build .app bundle
+        run: ./build.sh
+
+      - name: Verify bundle
+        run: |
+          BIN="Awake.app/Contents/MacOS/Awake"
+          test -f "$BIN" || { echo "missing binary"; exit 1; }
+          codesign -dv Awake.app 2>&1 | head -5 || true
+
+      - name: Zip app
+        run: ditto -c -k --keepParent Awake.app Awake.app.zip
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Awake-app
+          path: Awake.app.zip
