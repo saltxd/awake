@@ -44,9 +44,10 @@ struct AwakePanel: View {
     // MARK: Hero
 
     /// Glyph → big state word → tracked caption: the same hierarchy as Streak Tracker's
-    /// flame → count → label, so the two apps read as siblings. The word is the only color in the
-    /// panel; when Awake is holding the Mac awake the sun and word ignite in the shared amber and
-    /// the glyph gets a soft glow — state you can read from across the room.
+    /// flame → count → label, so the two apps read as siblings. The hero flips day/night with the
+    /// toggle — an amber sun with a soft glow when Awake holds the Mac awake, a cool moonlight moon
+    /// (matching the menu bar glyph) when sleep is back to normal — state you can read from across
+    /// the room.
     private var hero: some View {
         let awake = controller.state != .off
         let degraded = controller.state == .degraded
@@ -55,14 +56,14 @@ struct AwakePanel: View {
                 .font(.system(size: 38, weight: awake ? .semibold : .regular))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(degraded ? AnyShapeStyle(Color.orange)
-                                 : awake ? AnyShapeStyle(amber) : AnyShapeStyle(.tertiary))
+                                 : awake ? AnyShapeStyle(amber) : AnyShapeStyle(moonlight))
                 .shadow(color: awake && !degraded ? warmAccent.opacity(0.45) : .clear, radius: 12)
                 .contentTransition(.symbolEffect(.replace))
 
             Text(stateWord)
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(degraded ? AnyShapeStyle(Color.orange)
-                                 : awake ? AnyShapeStyle(amber) : AnyShapeStyle(.primary))
+                                 : awake ? AnyShapeStyle(amber) : AnyShapeStyle(moonlight))
                 .padding(.top, 2)
 
             Text(stateCaption)
@@ -78,7 +79,7 @@ struct AwakePanel: View {
         switch controller.state {
         case .on:       return "sun.max.fill"
         case .degraded: return "sun.max.trianglebadge.exclamationmark"
-        case .off:      return "sun.max"
+        case .off:      return "moon.zzz.fill"   // same glyph the menu bar shows when off
         }
     }
 
@@ -167,6 +168,15 @@ struct AwakePanel: View {
         let stops: [Color] = scheme == .dark
             ? [Color(red: 1.00, green: 0.80, blue: 0.42), Color(red: 1.00, green: 0.52, blue: 0.22)]
             : [Color(red: 1.00, green: 0.70, blue: 0.24), Color(red: 0.96, green: 0.38, blue: 0.13)]
+        return LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
+    }
+
+    /// The off state's cool counterpart to `amber` — a muted periwinkle→indigo so the hero flips
+    /// day/night with the toggle. Deliberately quieter than the amber: "on" stays the loud state.
+    private var moonlight: LinearGradient {
+        let stops: [Color] = scheme == .dark
+            ? [Color(red: 0.65, green: 0.70, blue: 1.00), Color(red: 0.44, green: 0.45, blue: 0.92)]
+            : [Color(red: 0.46, green: 0.50, blue: 0.92), Color(red: 0.31, green: 0.32, blue: 0.74)]
         return LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
     }
 
