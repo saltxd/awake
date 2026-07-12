@@ -137,9 +137,9 @@ struct AwakePanel: View {
     // MARK: Degraded affordance
 
     private var degradedNotice: some View {
-        PanelRow(title: "How to fix lid-close…", systemImage: "exclamationmark.triangle",
-                 tint: .secondary, iconTint: .orange) {
-            controller.showDegradedAlert(force: true)
+        PanelRow(title: "Enable lid-close blocking…", systemImage: "lock.open",
+                 tint: warmAccent) {
+            controller.enableLidClose()
         }
     }
 

@@ -5,7 +5,7 @@ set -euo pipefail
 APP_NAME="Awake"
 DISPLAY_NAME="Awake"
 BUNDLE_ID="com.saltxd.awake"
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$ROOT/.build/release/$APP_NAME"

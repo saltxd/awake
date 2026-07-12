@@ -32,15 +32,31 @@ a one-time explainer and a "How to fix…" row, rather than silently under-deliv
 
 Grab `Awake.app.zip` from the
 [latest release](https://github.com/saltxd/awake/releases/latest), unzip it, and drag
-**Awake.app** into `/Applications`. Apple Silicon, macOS 14 (Sonoma) or later.
+**Awake.app** into `/Applications`. Universal (Apple Silicon + Intel), macOS 14
+(Sonoma) or later.
 
-Awake is open-source and signed ad-hoc (not notarized), so the **first** time you open
-it macOS will warn you. Either approve it under **System Settings → Privacy & Security
-→ "Open Anyway"**, or from the Terminal:
+#### First launch — getting past the macOS warning
+
+Awake is open-source and signed ad-hoc (not notarized through Apple's paid Developer
+program), so the **first** time you open it macOS warns that it "can't verify it's
+free of malware." That's expected for any indie app — here's the one-time,
+no-Terminal way past it:
+
+1. Double-click **Awake.app**. macOS blocks it — click **Done**.
+2. Open **System Settings → Privacy & Security** and scroll down. You'll see
+   *"Awake.app was blocked to protect your Mac."* → click **Open Anyway**.
+3. Confirm with **Open Anyway** (Touch ID / password). It launches, and macOS won't
+   ask again.
+
+That's it — the moon appears in your menu bar.
+
+<details>
+<summary>Prefer the Terminal? One line does the same thing.</summary>
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Awake.app && open /Applications/Awake.app
 ```
+</details>
 
 ### Build from source
 
@@ -61,14 +77,15 @@ open /Applications/Awake.app
 
 ### One-time: enable lid-close blocking
 
-```sh
-./install.sh
-```
+The first time you flip **Keep Awake** on, Awake offers to set this up for you —
+click **Enable…**, type your Mac password in the standard macOS prompt, done. (The
+panel also has an *Enable lid-close blocking…* row until it's set up.)
 
-This installs a small, **scoped** sudoers rule (`/etc/sudoers.d/awake`) allowing exactly
-two commands without a password — `pmset disablesleep 1` and `pmset disablesleep 0`, and
-nothing else. It's validated with `visudo -cf` before install. Skip this and the app
-still works, just in degraded mode.
+Either way — the in-app button or `./install.sh` from a repo checkout — the same
+small, **scoped** sudoers rule lands in `/etc/sudoers.d/awake`: exactly two commands
+allowed without a password, `pmset disablesleep 1` and `pmset disablesleep 0`, and
+nothing else, validated with `visudo -cf` before install. Skip it and the app still
+works, just in degraded mode (idle sleep blocked, lid-close not).
 
 ## Safety rails
 

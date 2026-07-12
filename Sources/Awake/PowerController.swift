@@ -62,24 +62,53 @@ final class PowerController {
         state = .off
     }
 
-    /// Explain degraded mode once per run and point at the fix. Re-shown on demand from the panel.
+    /// Explain degraded mode once per run and offer the one-click fix. Re-shown on demand.
     func showDegradedAlert(force: Bool = false) {
         guard force || !alertShown else { return }
         alertShown = true
         NSApp.activate(ignoringOtherApps: true)
         defer { NSApplication.shared.deactivate() }
         let alert = NSAlert()
-        alert.messageText = "Lid-close sleep isn’t blocked"
+        alert.messageText = "Lid-close sleep isn’t blocked yet"
         alert.informativeText = """
             Awake is keeping your Mac awake while the lid is open, but closing the lid will still \
             put it to sleep.
 
-            To block lid-close sleep too, run ./install.sh once from the Awake repo. It installs a \
-            small, scoped sudoers rule that lets Awake toggle pmset without a password.
+            Blocking lid-close sleep needs a one-time system rule. Click Enable and macOS will ask \
+            for your password once. The rule allows exactly two commands — pmset disablesleep 1 \
+            and 0 — and nothing else. (Prefer to see it first? Run ./install.sh from the repo.)
             """
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        alert.addButton(withTitle: "Enable…")
+        alert.addButton(withTitle: "Not Now")
+        if alert.runModal() == .alertFirstButtonReturn {
+            enableLidClose()
+        }
+    }
+
+    /// One-time, in-app install of the scoped sudoers rule through the native macOS admin-password
+    /// prompt — the download-only user has no repo checkout and no Terminal habit, so this is their
+    /// path to full mode. Writes the same visudo-validated rule as install.sh; a cancelled prompt
+    /// just leaves us degraded. On success the pending intent completes: degraded promotes to on.
+    func enableLidClose() {
+        let rule = "\(NSUserName()) ALL=(root) NOPASSWD: "
+            + "/usr/bin/pmset disablesleep 1, /usr/bin/pmset disablesleep 0"
+        let cmd = "TMP=$(/usr/bin/mktemp) && /bin/echo '\(rule)' > \"$TMP\" "
+            + "&& /usr/sbin/visudo -cf \"$TMP\" "
+            + "&& /usr/bin/install -m 0440 -o root -g wheel \"$TMP\" /etc/sudoers.d/awake "
+            + "&& /bin/rm -f \"$TMP\""
+        let escaped = cmd
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let source = "do shell script \"\(escaped)\" with administrator privileges"
+        NSApp.activate(ignoringOtherApps: true)
+        var error: NSDictionary?
+        let ok = NSAppleScript(source: source)?.executeAndReturnError(&error) != nil
+        if ok {
+            if state == .degraded, runPmset(disable: true) { state = .on }
+        } else if let error, (error[NSAppleScript.errorNumber] as? Int) != -128 {   // -128 = user cancelled
+            NSLog("[Awake] lid-close setup failed: \(error)")
+        }
     }
 
     // MARK: IOKit assertion
