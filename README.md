@@ -1,9 +1,15 @@
 # Awake
 
 A tiny, native macOS menu bar app with one job: keep your Mac awake — even with the
-lid closed — behind a single on/off switch. It lives in your menu bar as a sun that
-lights up when it's holding your Mac awake, and gets out of the way otherwise. That's
-the whole app.
+lid closed — behind a single on/off switch. The menu bar tells you the state at a
+glance: a zzz-moon while sleep is normal, a filled sun while your Mac is being held
+awake (and a warning-badged sun if lid-close blocking isn't set up yet). That's the
+whole app.
+
+<p align="center">
+  <img src="docs/panel-off.png" width="300" alt="Awake panel, off — moonlight moon, normal sleep">
+  <img src="docs/panel-on.png" width="300" alt="Awake panel, on — amber sun, Mac stays awake even with the lid closed">
+</p>
 
 ## How it stays awake (two layers)
 
@@ -21,6 +27,20 @@ sleep is still blocked, but closing the lid will still sleep — and the app say
 a one-time explainer and a "How to fix…" row, rather than silently under-delivering.
 
 ## Install
+
+### Download (no build needed)
+
+Grab `Awake.app.zip` from the
+[latest release](https://github.com/saltxd/awake/releases/latest), unzip it, and drag
+**Awake.app** into `/Applications`. Apple Silicon, macOS 14 (Sonoma) or later.
+
+Awake is open-source and signed ad-hoc (not notarized), so the **first** time you open
+it macOS will warn you. Either approve it under **System Settings → Privacy & Security
+→ "Open Anyway"**, or from the Terminal:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Awake.app && open /Applications/Awake.app
+```
 
 ### Build from source
 
