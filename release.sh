@@ -8,7 +8,7 @@ set -euo pipefail
 APP_NAME="Awake"
 DISPLAY_NAME="Awake"
 BUNDLE_ID="com.saltxd.awake"
-VERSION="${1:-1.1.0}"; VERSION="${VERSION#v}"   # accept v1.1.0 or 1.1.0
+VERSION="${1:-1.1.1}"; VERSION="${VERSION#v}"   # accept v1.1.1 or 1.1.1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$ROOT/$APP_NAME.app"
@@ -22,6 +22,11 @@ echo "▶ Assembling $APP_NAME.app…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
+
+# App icon (Finder / dialogs). Regenerate with Tools/generate-icon.swift if missing.
+if [[ -f "$ROOT/AppIcon.icns" ]]; then
+  cp "$ROOT/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -38,6 +43,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
 </dict>
 </plist>
 PLIST

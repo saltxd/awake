@@ -18,7 +18,9 @@ enum MenuBarIcon {
         case .off:      (symbol, weight) = ("moon.zzz", .regular)
         }
 
-        let config = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: weight)
+        // 13pt (systemFontSize) reads visibly smaller than the neighboring Wi-Fi/battery items;
+        // 16pt matches their visual weight without clipping the status bar.
+        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: weight)
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Awake")?
             .withSymbolConfiguration(config)
             ?? composite(state: state)
@@ -31,7 +33,7 @@ enum MenuBarIcon {
     /// for degraded, stamp a small warning triangle in the corner — mirrors how Streak Tracker
     /// composites its flame + number into one template image.
     private static func composite(state: PowerController.AwakeState) -> NSImage {
-        let config = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: .regular)
+        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
         let base = NSImage(systemSymbolName: state == .on ? "sun.max.fill" : "sun.max",
                            accessibilityDescription: "Awake")?
             .withSymbolConfiguration(config) ?? NSImage()
@@ -40,7 +42,7 @@ enum MenuBarIcon {
               let badge = NSImage(systemSymbolName: "exclamationmark.triangle.fill",
                                   accessibilityDescription: nil)?
                 .withSymbolConfiguration(NSImage.SymbolConfiguration(
-                    pointSize: NSFont.systemFontSize * 0.6, weight: .bold))
+                    pointSize: 10, weight: .bold))
         else { return base }
 
         let size = base.size
