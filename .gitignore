@@ -5,3 +5,4 @@
 
 # Intermediate icon artifact — AppIcon.icns is committed; the iconset is regenerated.
 AppIcon.iconset/
+*.app.zip

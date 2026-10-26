@@ -33,12 +33,30 @@ private struct AwakeLabel: View {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let controller = PowerController()
     let loginItem = LoginItem()
+    private lazy var powerMonitor = PowerSourceMonitor { [controller] onPower in
+        controller.powerSourceChanged(onPower: onPower)
+    }
+
+    /// Before any event arrives: recover from a prior crash/power-loss that may have left `disablesleep 1` set, then
+    /// take `awake://` links. (An `awake://on` that launched Awake can be delivered before didFinishLaunching, so
+    /// the self-heal has to come first or it would undo the link.)
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        controller.selfHealAtLaunch()
+        NSAppleEventManager.shared().setEventHandler(
+            self, andSelector: #selector(handleGetURL(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Recover from a prior crash/power-loss that may have left `disablesleep 1` set, then
-        // install the signal rails so an orderly kill still restores normal sleep.
-        controller.selfHealAtLaunch()
+        // Install the signal rails so an orderly kill still restores normal sleep.
         installSignalHandlers()
+        powerMonitor.start()
+    }
+
+    @objc private func handleGetURL(_ event: NSAppleEventDescriptor, withReplyEvent reply: NSAppleEventDescriptor) {
+        guard let text = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: text), let command = AwakeCommand(url: url) else { return }
+        controller.perform(command)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

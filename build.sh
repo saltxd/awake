@@ -5,7 +5,7 @@ set -euo pipefail
 APP_NAME="Awake"
 DISPLAY_NAME="Awake"
 BUNDLE_ID="com.saltxd.awake"
-VERSION="1.1.1"
+VERSION="1.2.0"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$ROOT/.build/release/$APP_NAME"
@@ -40,6 +40,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>$BUNDLE_ID</string>
+      <key>CFBundleURLSchemes</key><array><string>awake</string></array>
+    </dict>
+  </array>
 </dict>
 </plist>
 PLIST

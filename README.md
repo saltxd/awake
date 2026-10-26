@@ -26,6 +26,30 @@ If the sudoers rule for layer 2 isn't installed, Awake runs in **degraded** mode
 sleep is still blocked, but closing the lid will still sleep — and the app says so, with
 a one-time explainer and a "How to fix…" row, rather than silently under-delivering.
 
+## Pauses on battery
+
+Blocking lid-close sleep means a Mac left "awake" and slipped into a bag stays awake and runs
+hot. So by default Awake only holds the Mac up while it's on the power adapter: unplug it and
+sleep goes back to normal (the panel says **Paused**), plug it back in and Awake picks up again.
+Turn off **Pause on battery** in the panel to keep it awake on battery too.
+
+## Control it from scripts and other apps
+
+Awake answers three links, so anything on the Mac can flip it without going around it (and the
+menu bar keeps telling the truth):
+
+```sh
+open -g awake://on        # launches Awake if needed
+open -g awake://off
+open -g awake://toggle
+```
+
+It also publishes what it's doing, for tools that want to show it:
+
+```sh
+defaults read com.saltxd.awake state   # on, degraded, paused or off
+```
+
 ## Install
 
 ### Download (no build needed)
@@ -114,12 +138,15 @@ pmset -g | grep SleepDisabled
 | Path | Purpose |
 |---|---|
 | `Sources/Awake/AwakeApp.swift` | App entry (`MenuBarExtra .window`), lifecycle + signal rails |
-| `Sources/Awake/PowerController.swift` | Tri-state machine: IOKit assertion + `sudo -n pmset` |
+| `Sources/Awake/PowerController.swift` | State machine: IOKit assertion + `sudo -n pmset`, pause on battery, published state |
+| `Sources/Awake/AwakeCommand.swift` | `awake://` links and the hold/pause/release decision |
+| `Sources/Awake/PowerSourceMonitor.swift` | Notices the switch between power adapter and battery |
 | `Sources/Awake/AwakePanel.swift` | The menu bar popover UI (hero + Keep Awake switch) |
 | `Sources/Awake/MenuBarIcon.swift` | The monochrome menu-bar sun glyph, per state |
 | `Sources/Awake/LoginItem.swift` | Launch-at-login toggle (`SMAppService`) |
 | `install.sh` | Installs the scoped sudoers rule |
 | `build.sh` | Builds + bundles `Awake.app` |
+| `Tests/AwakeTests` | `swift test` (needs a full Xcode toolchain) |
 
 ## License
 

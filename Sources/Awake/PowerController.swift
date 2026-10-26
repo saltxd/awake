@@ -16,9 +16,30 @@ import Observation
 @MainActor
 @Observable
 final class PowerController {
-    enum AwakeState { case off, on, degraded }
+    /// `paused`: asked to stay awake, but on battery with "Pause on battery" set, so sleep is back to normal until
+    /// the Mac is plugged in again.
+    enum AwakeState: String { case off, on, degraded, paused }
 
     private(set) var state: AwakeState = .off
+
+    /// What the user asked for (the switch). `state` is what Awake is actually doing about it.
+    private(set) var wantsAwake = false
+
+    /// On by default: lid-close sleep stays blocked only while the Mac is on its power adapter.
+    var pauseOnBattery: Bool = UserDefaults.standard.object(forKey: Keys.pauseOnBattery) as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(pauseOnBattery, forKey: Keys.pauseOnBattery)
+            apply()
+        }
+    }
+
+    private(set) var onPower = PowerSourceMonitor.isOnPower()
+
+    private enum Keys {
+        static let pauseOnBattery = "pauseOnBattery"
+        /// Published for other tools on this Mac (a phone companion, a status script): "on", "degraded", "paused", "off".
+        static let state = "state"
+    }
 
     /// The held idle-sleep assertion, or nil when none is active. Mirrored into a static
     /// (`emergencyAssertionID`) so a signal handler — which can't reach the main actor — can still
@@ -31,7 +52,40 @@ final class PowerController {
     // MARK: Control
 
     func setAwake(_ on: Bool) {
-        if on { turnOn() } else { restore() }
+        wantsAwake = on
+        apply()
+    }
+
+    /// An `awake://` link.
+    func perform(_ command: AwakeCommand) {
+        switch command {
+        case .on: setAwake(true)
+        case .off: setAwake(false)
+        case .toggle: setAwake(!wantsAwake)
+        }
+    }
+
+    /// Only a switch between adapter and battery matters; the monitor also fires on every percentage change.
+    func powerSourceChanged(onPower: Bool) {
+        guard onPower != self.onPower else { return }
+        self.onPower = onPower
+        apply()
+    }
+
+    private func apply() {
+        switch AwakePolicy.target(wantsAwake: wantsAwake, pauseOnBattery: pauseOnBattery, onPower: onPower) {
+        case .hold: turnOn()
+        case .pause: pause()
+        case .release: restore()
+        }
+    }
+
+    /// Lets the Mac sleep normally while keeping the user's "on", so plugging back in resumes it.
+    private func pause() {
+        releaseAssertion()
+        _ = runPmset(disable: false)
+        state = .paused
+        publish()
     }
 
     private func turnOn() {
@@ -44,6 +98,7 @@ final class PowerController {
             NSLog("[Awake] pmset disablesleep 1 failed — degraded (lid-close will still sleep)")
             showDegradedAlert()
         }
+        publish()
     }
 
     /// Idempotent teardown, safe to call from any path (toggle-off, quit, error, or repeatedly):
@@ -52,6 +107,7 @@ final class PowerController {
         releaseAssertion()
         _ = runPmset(disable: false)
         state = .off
+        publish()
     }
 
     /// Run once at launch: clear any leftover `disablesleep 1` from a crash or power-loss that
@@ -59,7 +115,13 @@ final class PowerController {
     /// could not have set the flag in the first place, so there is nothing to undo.
     func selfHealAtLaunch() {
         _ = runPmset(disable: false)
+        wantsAwake = false
         state = .off
+        publish()
+    }
+
+    private func publish() {
+        UserDefaults.standard.set(state.rawValue, forKey: Keys.state)
     }
 
     /// Explain degraded mode once per run and offer the one-click fix. Re-shown on demand.
@@ -105,7 +167,10 @@ final class PowerController {
         var error: NSDictionary?
         let ok = NSAppleScript(source: source)?.executeAndReturnError(&error) != nil
         if ok {
-            if state == .degraded, runPmset(disable: true) { state = .on }
+            if state == .degraded, runPmset(disable: true) {
+                state = .on
+                publish()
+            }
         } else if let error, (error[NSAppleScript.errorNumber] as? Int) != -128 {   // -128 = user cancelled
             NSLog("[Awake] lid-close setup failed: \(error)")
         }

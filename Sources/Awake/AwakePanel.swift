@@ -23,6 +23,7 @@ struct AwakePanel: View {
 
             Divider().padding(.horizontal, 4).padding(.vertical, 12)
 
+            pauseOnBatteryRow
             loginRow
 
             Divider().padding(.horizontal, 4).padding(.vertical, 6)
@@ -49,7 +50,7 @@ struct AwakePanel: View {
     /// (matching the menu bar glyph) when sleep is back to normal — state you can read from across
     /// the room.
     private var hero: some View {
-        let awake = controller.state != .off
+        let awake = controller.state == .on || controller.state == .degraded
         let degraded = controller.state == .degraded
         return VStack(spacing: 2) {
             Image(systemName: heroSymbol)
@@ -80,6 +81,7 @@ struct AwakePanel: View {
         case .on:       return "sun.max.fill"
         case .degraded: return "sun.max.trianglebadge.exclamationmark"
         case .off:      return "moon.zzz.fill"   // same glyph the menu bar shows when off
+        case .paused:   return "powerplug"
         }
     }
 
@@ -88,6 +90,7 @@ struct AwakePanel: View {
         case .on:       return "Awake"
         case .degraded: return "Limited"
         case .off:      return "Off"
+        case .paused:   return "Paused"
         }
     }
 
@@ -96,13 +99,14 @@ struct AwakePanel: View {
         case .on:       return "EVEN WITH THE LID CLOSED"
         case .degraded: return "LID-CLOSE WILL STILL SLEEP"
         case .off:      return "NORMAL SLEEP"
+        case .paused:   return "ON BATTERY · RESUMES WHEN PLUGGED IN"
         }
     }
 
     // MARK: Centerpiece control
 
     private var keepAwake: Binding<Bool> {
-        Binding(get: { controller.state != .off },
+        Binding(get: { controller.wantsAwake },
                 set: { controller.setAwake($0) })
     }
 
@@ -112,8 +116,8 @@ struct AwakePanel: View {
         HStack(spacing: 8) {
             Image(systemName: "sun.max")
                 .frame(width: 16)
-                .foregroundStyle(controller.state != .off ? AnyShapeStyle(warmAccent)
-                                                          : AnyShapeStyle(.secondary))
+                .foregroundStyle(controller.wantsAwake ? AnyShapeStyle(warmAccent)
+                                                       : AnyShapeStyle(.secondary))
             Text("Keep Awake")
                 .font(.body.weight(.semibold))
             Spacer()
@@ -141,6 +145,25 @@ struct AwakePanel: View {
                  tint: warmAccent) {
             controller.enableLidClose()
         }
+    }
+
+    // MARK: Battery
+
+    /// On by default. Awake blocks lid-close sleep, so a Mac left on and put in a bag would stay awake and run hot.
+    private var pauseOnBatteryRow: some View {
+        HStack(spacing: 8) {
+            Label("Pause on battery", systemImage: "battery.50percent")
+                .labelStyle(PanelLabelStyle())
+            Spacer()
+            Toggle("Pause on battery", isOn: Binding(get: { controller.pauseOnBattery },
+                                                     set: { controller.pauseOnBattery = $0 }))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .help("Lets the Mac sleep while it's on battery, and keeps it awake again once it's plugged in.")
     }
 
     // MARK: Login

@@ -15,7 +15,7 @@ enum MenuBarIcon {
         switch state {
         case .on:       (symbol, weight) = ("sun.max.fill", .semibold)
         case .degraded: (symbol, weight) = ("sun.max.trianglebadge.exclamationmark", .regular)
-        case .off:      (symbol, weight) = ("moon.zzz", .regular)
+        case .off, .paused: (symbol, weight) = ("moon.zzz", .regular)   // paused: the Mac can sleep again
         }
 
         // 13pt (systemFontSize) reads visibly smaller than the neighboring Wi-Fi/battery items;

@@ -15,5 +15,7 @@ let package = Package(
                 .linkedFramework("ServiceManagement"),
             ]
         ),
+        // The pure decisions (what an awake:// link asks, when to hold the Mac awake). Needs a full Xcode toolchain.
+        .testTarget(name: "AwakeTests", dependencies: ["Awake"]),
     ]
 )
